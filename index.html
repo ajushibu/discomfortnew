@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-title" content="Discomfort"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#0f0e0d"/>
-<meta name="application-name" content="Discomfort Log"/>
 <title>Discomfort Log</title>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
@@ -20,17 +19,11 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:#0f0e0d}
 html,body,#root{min-height:100vh;min-height:100dvh}
-body{
-  background:#0f0e0d;color:#e8e2dd;font-family:'Sora',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;
-  /* Safe area insets for notched phones */
-  padding-top:env(safe-area-inset-top);
-  padding-bottom:env(safe-area-inset-bottom);
-  padding-left:env(safe-area-inset-left);
-  padding-right:env(safe-area-inset-right);
-}
+body{background:#0f0e0d;color:#e8e2dd;font-family:'Sora',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 button{cursor:pointer;font-family:'Sora',sans-serif;border:none;background:none}
-textarea:focus,button:focus{outline:none}
-textarea::placeholder{color:rgba(255,255,255,0.2)}
+textarea:focus,button:focus,input:focus{outline:none}
+textarea::placeholder,input::placeholder{color:rgba(255,255,255,0.2)}
+input[type=password]{font-family:'Sora',sans-serif}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
 @keyframes fu{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fi{from{opacity:0}to{opacity:1}}
@@ -40,7 +33,7 @@ textarea::placeholder{color:rgba(255,255,255,0.2)}
 @keyframes cr{from{opacity:0;transform:perspective(600px) rotateX(15deg) scale(0.9)}to{opacity:1;transform:perspective(600px) rotateX(0) scale(1)}}
 @keyframes ember{0%,100%{box-shadow:0 0 6px rgba(249,115,22,0.15),inset 0 0 8px rgba(249,115,22,0.05)}50%{box-shadow:0 0 14px rgba(249,115,22,0.3),inset 0 0 12px rgba(249,115,22,0.08)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes lp{0%,100%{opacity:0.3;transform:scale(0.95)}50%{opacity:1;transform:scale(1.05)}}
+@keyframes tp{0%{opacity:0.4}50%{opacity:1}100%{opacity:0.4}}
 </style>
 </head>
 <body>
@@ -49,23 +42,23 @@ textarea::placeholder{color:rgba(255,255,255,0.2)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <script type="text/babel">
-const {useState, useEffect, useMemo} = React;
-
-/* ── STORAGE ── */
-const store = {
-  get(k) { try { const v=localStorage.getItem(k); return v?JSON.parse(v):null; } catch { return null; } },
-  set(k,v) { try { localStorage.setItem(k,JSON.stringify(v)); } catch {} },
+const {useState,useEffect,useMemo,useCallback}=React;
+const store={
+  get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
+  getRaw(k){try{return localStorage.getItem(k);}catch{return null;}},
+  setRaw(k,v){try{localStorage.setItem(k,v);}catch{}},
 };
 
 /* ── DATA ── */
-const DIFF = [
+const DIFF=[
   {label:"Mild",xp:10,color:"#6ee7a0",glow:"rgba(110,231,160,0.25)"},
   {label:"Moderate",xp:25,color:"#fbbf24",glow:"rgba(251,191,36,0.25)"},
   {label:"Hard",xp:50,color:"#f97316",glow:"rgba(249,115,22,0.3)"},
   {label:"Intense",xp:80,color:"#ef4444",glow:"rgba(239,68,68,0.35)"},
   {label:"Extreme",xp:120,color:"#dc2626",glow:"rgba(220,38,38,0.4)"},
 ];
-const CATS = [
+const CATS=[
   {id:"social",label:"Social",icon:"\u25C9",color:"#818cf8"},
   {id:"physical",label:"Physical",icon:"\u25B3",color:"#f472b6"},
   {id:"professional",label:"Professional",icon:"\u25C6",color:"#38bdf8"},
@@ -73,7 +66,7 @@ const CATS = [
   {id:"creative",label:"Creative",icon:"\u2726",color:"#c084fc"},
   {id:"other",label:"Other",icon:"\u2B21",color:"#fbbf24"},
 ];
-const NUDGES = {
+const NUDGES={
   social:["Compliment a stranger sincerely","Start a conversation with someone you'd normally avoid","Share an unpopular opinion at lunch","Call someone instead of texting","Ask for help with something you'd usually do alone","Introduce yourself to a neighbour you've never spoken to","Give honest feedback someone needs to hear","Eat lunch with someone new","Disagree respectfully in a group discussion","Ask a 'dumb' question in public"],
   physical:["Take a cold shower \u2014 full 2 minutes","Do a workout in a public park","Try an exercise you're terrible at","Hold a plank until your arms shake","Walk barefoot on rough ground for 5 minutes","Skip the elevator \u2014 take stairs all day","Do 50 burpees, no breaks","Stretch into a pose that's uncomfortable","Run in the rain","Fast until noon"],
   professional:["Volunteer for a task outside your comfort zone","Present an idea to someone senior","Admit you don't know something in a meeting","Ask for feedback on your weakest area","Set a boundary with a colleague","Negotiate something you'd normally accept","Send that email you've been avoiding","Speak first in a meeting","Teach someone a skill you're still learning","Take ownership of a mistake publicly"],
@@ -92,6 +85,18 @@ const TITLES=["Comfort Dweller","Toe Dipper","Edge Walker","Boundary Pusher","Fe
 function lvl(xp){let l=0;for(let i=0;i<LEVELS.length-1;i++)if(xp>=LEVELS[i])l=i;const c=LEVELS[l],n=LEVELS[l+1]||LEVELS[l]+2000;return{level:l,title:TITLES[l],progress:Math.min((xp-c)/(n-c),1),next:n};}
 function sRng(seed){let h=0;for(let i=0;i<seed.length;i++)h=Math.imul(31,h)+seed.charCodeAt(i)|0;return()=>{h=Math.imul(h^(h>>>16),0x45d9f3b);h=Math.imul(h^(h>>>13),0x45d9f3b);return((h^(h>>>16))>>>0)/4294967296;};}
 
+/* ── CLAUDE API ── */
+async function callClaude(apiKey, systemPrompt, userMsg) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,system:systemPrompt,messages:[{role:"user",content:userMsg}]})
+  });
+  if(!res.ok) throw new Error("API error: "+res.status);
+  const data=await res.json();
+  return data.content.map(b=>b.text||"").join("");
+}
+
 /* ── RING ── */
 function Ring({progress,size=64,stroke=5,color="#f97316",bg="rgba(255,255,255,0.06)",children}){
   const r=(size-stroke)/2,circ=2*Math.PI*r;
@@ -101,6 +106,14 @@ function Ring({progress,size=64,stroke=5,color="#f97316",bg="rgba(255,255,255,0.
       React.createElement("circle",{cx:size/2,cy:size/2,r,fill:"none",stroke:color,strokeWidth:stroke,strokeDasharray:circ,strokeDashoffset:circ*(1-progress),strokeLinecap:"round",style:{transition:"stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1)"}})
     ),
     React.createElement("div",{style:{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}},children)
+  );
+}
+
+/* ── THINKING DOTS ── */
+function Dots(){
+  const h=React.createElement;
+  return h("span",{style:{display:"inline-flex",gap:3,alignItems:"center"}},
+    [0,1,2].map(i=>h("span",{key:i,style:{width:4,height:4,borderRadius:"50%",background:"#f97316",animation:"tp 1s ease-in-out "+i*0.2+"s infinite"}}))
   );
 }
 
@@ -118,16 +131,25 @@ function App(){
   const[nTxt,setNTxt]=useState("");
   const[nRev,setNRev]=useState(false);
   const[xpPop,setXpPop]=useState(null);
+  const[apiKey,setApiKey]=useState(()=>store.getRaw("dc-apikey")||"");
+  const[keyInput,setKeyInput]=useState(()=>store.getRaw("dc-apikey")||"");
+  const[aiTagging,setAiTagging]=useState(false);
+  const[insight,setInsight]=useState(null);
+  const[insightLoading,setInsightLoading]=useState(false);
+  const[smartNudge,setSmartNudge]=useState(null);
+  const[smartNudgeLoading,setSmartNudgeLoading]=useState(false);
+  const[aiError,setAiError]=useState(null);
 
   useEffect(()=>{store.set("dc-v3",entries);},[entries]);
+  const hasKey=apiKey&&apiKey.startsWith("sk-");
 
-  const now=new Date(), todayK=toK(now.getFullYear(),now.getMonth(),now.getDate());
+  const now=new Date(),todayK=toK(now.getFullYear(),now.getMonth(),now.getDate());
   const keys=useMemo(()=>Object.keys(entries),[entries]);
   const totalXP=useMemo(()=>keys.reduce((s,k)=>s+DIFF[entries[k].d].xp,0),[keys,entries]);
   const li=lvl(totalXP);
   const streak=useMemo(()=>{let s=0,d=new Date(now);while(true){const k=toK(d.getFullYear(),d.getMonth(),d.getDate());if(entries[k]){s++;d.setDate(d.getDate()-1);}else break;}return s;},[entries,todayK]);
   const longestStreak=useMemo(()=>{if(!keys.length)return 0;const sorted=[...keys].sort();let mx=1,cur=1;for(let i=1;i<sorted.length;i++){const diff=(new Date(sorted[i])-new Date(sorted[i-1]))/864e5;if(diff===1){cur++;mx=Math.max(mx,cur);}else cur=1;}return mx;},[keys]);
-  const dins=dim(vY,vM), fd=new Date(vY,vM,1).getDay();
+  const dins=dim(vY,vM),fd=new Date(vY,vM,1).getDay();
   const moKeys=useMemo(()=>keys.filter(k=>{const p=pK(k);return p.year===vY&&p.month===vM;}),[keys,vY,vM]);
   const catCounts=useMemo(()=>{const c={};CATS.forEach(x=>c[x.id]=0);keys.forEach(k=>{const cat=entries[k].c||"other";c[cat]=(c[cat]||0)+1;});return c;},[keys,entries]);
 
@@ -135,21 +157,75 @@ function App(){
   function save(){if(!fTxt.trim())return;const isNew=!entries[sel];setEntries(p=>({...p,[sel]:{t:fTxt.trim(),d:fDif,c:fCat}}));if(isNew){setXpPop(DIFF[fDif].xp);setTimeout(()=>setXpPop(null),1600);}setSel(null);}
   function del(){setEntries(p=>{const n={...p};delete n[sel];return n;});setSel(null);}
   function chMo(dir){let m=vM+dir,y=vY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}setVM(m);setVY(y);}
-  function roll(cid){setNCat(cid);setNRev(false);const rng=sRng(todayK+cid+Date.now());const p=NUDGES[cid];setNTxt(p[Math.floor(rng()*p.length)]);setTimeout(()=>setNRev(true),500);}
+  function roll(cid){setNCat(cid);setNRev(false);setSmartNudge(null);const rng=sRng(todayK+cid+Date.now());const p=NUDGES[cid];setNTxt(p[Math.floor(rng()*p.length)]);setTimeout(()=>setNRev(true),500);}
+
+  /* ── AI: Auto-tag ── */
+  async function autoTag(){
+    if(!hasKey||!fTxt.trim()||aiTagging)return;
+    setAiTagging(true);setAiError(null);
+    try{
+      const resp=await callClaude(apiKey,
+        'You analyze acts of discomfort. Given a description, respond with ONLY a JSON object: {"category":"social|physical|professional|emotional|creative|other","difficulty":0-4} where difficulty 0=mild,1=moderate,2=hard,3=intense,4=extreme. No other text.',
+        fTxt.trim()
+      );
+      const clean=resp.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean);
+      if(parsed.category&&CATS.find(c=>c.id===parsed.category))setFCat(parsed.category);
+      if(typeof parsed.difficulty==="number"&&parsed.difficulty>=0&&parsed.difficulty<=4)setFDif(parsed.difficulty);
+    }catch(e){setAiError("Auto-tag failed");}
+    setAiTagging(false);
+  }
+
+  /* ── AI: Weekly Insight ── */
+  async function getInsight(){
+    if(!hasKey||insightLoading)return;
+    setInsightLoading(true);setAiError(null);setInsight(null);
+    try{
+      const recent=[...keys].sort().reverse().slice(0,14);
+      if(recent.length<2){setInsight("Log a few more entries for me to spot patterns.");setInsightLoading(false);return;}
+      const summary=recent.map(k=>{
+        const e=entries[k],p=pK(k);
+        return `${MO_S[p.month]} ${p.day}: "${e.t}" [${CATS.find(c=>c.id===e.c)?.label||"Other"}, ${DIFF[e.d].label}]`;
+      }).join("\n");
+      const resp=await callClaude(apiKey,
+        'You are a concise personal growth coach. Analyze these recent discomfort log entries. Write 2-3 sentences max: one observation about patterns (which domains are being pushed vs avoided, difficulty trends), and one specific actionable suggestion for next week. Be warm but direct. Do not use bullet points or headers.',
+        "Here are my recent discomfort log entries:\n"+summary
+      );
+      setInsight(resp);
+    }catch(e){setAiError("Insight failed");}
+    setInsightLoading(false);
+  }
+
+  /* ── AI: Smart Nudge ── */
+  async function getSmartNudge(catId){
+    if(!hasKey)return;
+    setSmartNudgeLoading(true);setSmartNudge(null);setAiError(null);
+    try{
+      const recent=[...keys].sort().reverse().slice(0,10);
+      const summary=recent.length?recent.map(k=>{
+        const e=entries[k];return `"${e.t}" [${CATS.find(c=>c.id===e.c)?.label}, ${DIFF[e.d].label}]`;
+      }).join("; "):"No entries yet.";
+      const resp=await callClaude(apiKey,
+        `You generate personalized discomfort challenges. The user wants a "${catId}" category challenge. Based on their history, suggest ONE specific, actionable challenge they haven't done before. Make it creative and calibrated slightly above their recent difficulty. Reply with ONLY the challenge text, no quotes, no preamble, 1-2 sentences max.`,
+        "My recent entries: "+summary
+      );
+      setSmartNudge(resp.trim());
+    }catch(e){setAiError("Smart nudge failed");}
+    setSmartNudgeLoading(false);
+  }
+
+  function saveKey(){store.setRaw("dc-apikey",keyInput);setApiKey(keyInput);}
 
   const h=React.createElement;
 
   return h("div",{style:{minHeight:"100vh",minHeight:"100dvh",position:"relative",overflow:"hidden"}},
-    /* Atmosphere */
     h("div",{style:{position:"fixed",top:0,left:0,right:0,height:"40vh",background:"radial-gradient(ellipse at 30% 0%, rgba(249,115,22,0.06) 0%, transparent 60%)",pointerEvents:"none"}}),
     h("div",{style:{position:"fixed",bottom:0,left:0,right:0,height:"30vh",background:"radial-gradient(ellipse at 70% 100%, rgba(239,68,68,0.04) 0%, transparent 60%)",pointerEvents:"none"}}),
-
-    /* XP popup */
     xpPop&&h("div",{style:{position:"fixed",top:"38%",left:"50%",fontSize:32,fontWeight:900,color:"#f97316",fontFamily:"'Fraunces',serif",textShadow:"0 0 30px rgba(249,115,22,0.5)",animation:"xf 1.6s ease-out forwards",zIndex:200,pointerEvents:"none"}},"+"+xpPop+" XP"),
 
     h("div",{style:{maxWidth:440,margin:"0 auto",padding:"28px 18px 48px",position:"relative",zIndex:1}},
 
-      /* ── HERO ── */
+      /* HERO */
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}},
         h("div",null,
           h("h1",{style:{fontFamily:"'Fraunces',serif",fontSize:30,fontWeight:900,lineHeight:1.1,color:"#fafaf9",letterSpacing:"-1px"}},"Discomfort",h("br"),h("span",{style:{color:"#f97316",fontStyle:"italic",fontWeight:300,fontSize:34}},"Log")),
@@ -162,8 +238,6 @@ function App(){
           )
         )
       ),
-
-      /* Level bar */
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:4,marginBottom:6}},
         h("span",{style:{fontSize:12,fontWeight:600,background:"linear-gradient(90deg,#f97316,#fbbf24,#f97316)",backgroundSize:"200% auto",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"sh 4s linear infinite"}},li.title),
         h("span",{style:{fontSize:10,color:"rgba(255,255,255,0.15)",fontWeight:500}},totalXP+"/"+li.next+" XP")
@@ -172,7 +246,7 @@ function App(){
         h("div",{style:{height:"100%",borderRadius:2,background:"linear-gradient(90deg,#f97316,#dc2626)",width:li.progress*100+"%",transition:"width 0.8s cubic-bezier(0.22,1,0.36,1)"}})
       ),
 
-      /* Chips */
+      /* CHIPS */
       h("div",{style:{display:"flex",gap:8,marginBottom:22,flexWrap:"wrap"}},
         streak>0&&h("div",{style:{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.04)",borderRadius:20,padding:"5px 14px 5px 10px"}},
           h("span",{style:{width:6,height:6,borderRadius:"50%",background:"#f97316",boxShadow:"0 0 6px rgba(249,115,22,0.3)"}}),
@@ -191,14 +265,20 @@ function App(){
         )
       ),
 
-      /* ── TABS ── */
+      /* TABS */
       h("div",{style:{display:"flex",gap:2,marginBottom:22,background:"rgba(255,255,255,0.02)",borderRadius:10,padding:3,border:"1px solid rgba(255,255,255,0.03)"}},
-        [{id:"cal",label:"Calendar"},{id:"nudge",label:"Nudge"},{id:"stats",label:"Stats"}].map(t=>
-          h("button",{key:t.id,onClick:()=>setTab(t.id),style:{flex:1,padding:"8px 0",borderRadius:8,background:tab===t.id?"rgba(255,255,255,0.05)":"transparent",color:tab===t.id?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.3)",fontSize:12,fontWeight:600,transition:"all 0.25s",display:"flex",alignItems:"center",justifyContent:"center",gap:6}},
-            h("span",{style:{width:4,height:4,borderRadius:"50%",background:tab===t.id?"#f97316":"transparent",transition:"all 0.25s"}}),
+        [{id:"cal",label:"Calendar"},{id:"nudge",label:"Nudge"},{id:"stats",label:"Stats"},{id:"settings",label:"\u2699"}].map(t=>
+          h("button",{key:t.id,onClick:()=>setTab(t.id),style:{flex:t.id==="settings"?0.5:1,padding:"8px 0",borderRadius:8,background:tab===t.id?"rgba(255,255,255,0.05)":"transparent",color:tab===t.id?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.3)",fontSize:t.id==="settings"?14:12,fontWeight:600,transition:"all 0.25s",display:"flex",alignItems:"center",justifyContent:"center",gap:6}},
+            t.id!=="settings"&&h("span",{style:{width:4,height:4,borderRadius:"50%",background:tab===t.id?"#f97316":"transparent",transition:"all 0.25s"}}),
             t.label
           )
         )
+      ),
+
+      /* AI Error banner */
+      aiError&&h("div",{style:{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:8,padding:"6px 12px",marginBottom:12,fontSize:11,color:"#ef4444",display:"flex",justifyContent:"space-between",alignItems:"center"}},
+        h("span",null,aiError),
+        h("button",{onClick:()=>setAiError(null),style:{color:"#ef4444",fontSize:14}},"\u00D7")
       ),
 
       /* ─── CALENDAR ─── */
@@ -218,7 +298,7 @@ function App(){
           [...Array(fd)].map((_,i)=>h("div",{key:"e"+i})),
           [...Array(dins)].map((_,i)=>{
             const day=i+1,k=toK(vY,vM,day),e=entries[k],isT=k===todayK,isF=new Date(vY,vM,day)>now;
-            const cat=e?CATS.find(c=>c.id===e.c):null, dc=e?DIFF[e.d]:null;
+            const cat=e?CATS.find(c=>c.id===e.c):null,dc=e?DIFF[e.d]:null;
             return h("button",{key:day,onClick:()=>!isF&&open(day),disabled:isF,style:{
               aspectRatio:"1",borderRadius:10,border:"1px solid "+(e?dc.color+"30":isT&&!e?"rgba(249,115,22,0.4)":"rgba(255,255,255,0.03)"),
               background:e?"radial-gradient(circle at 50% 50%,"+dc.glow+", transparent 70%)":"rgba(255,255,255,0.012)",
@@ -226,7 +306,7 @@ function App(){
               transition:"all 0.2s",position:"relative",opacity:isF?0.2:1,cursor:isF?"default":"pointer",
               animation:isT&&!e?"ember 3s ease-in-out infinite":"pi 0.3s ease-out "+i*15+"ms both",
             }},
-              h("span",{style:{fontSize:12,fontWeight:e?700:500,letterSpacing:"-0.3px",color:e?dc.color:isT?"#f97316":"rgba(255,255,255,0.3)",fontFamily:"'Sora',sans-serif"}},day),
+              h("span",{style:{fontSize:12,fontWeight:e?700:500,color:e?dc.color:isT?"#f97316":"rgba(255,255,255,0.3)"}},day),
               e&&h("div",{style:{width:4,height:4,borderRadius:"50%",background:dc.color,boxShadow:"0 0 6px "+dc.glow,marginTop:1}}),
               e&&cat&&h("span",{style:{fontSize:7,color:cat.color,fontWeight:700,position:"absolute",top:3,right:4,opacity:0.7}},cat.icon)
             );
@@ -251,21 +331,20 @@ function App(){
       tab==="nudge"&&h("div",{style:{animation:"fu 0.35s ease-out"}},
         h("div",{style:{textAlign:"center",marginBottom:24}},
           h("h2",{style:{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"#fafaf9"}},"Need a push?"),
-          h("p",{style:{fontSize:12,color:"rgba(255,255,255,0.25)",marginTop:4}},"Pick a domain. Let fate choose.")
+          h("p",{style:{fontSize:12,color:"rgba(255,255,255,0.25)",marginTop:4}},hasKey?"AI-powered challenges based on your history":"Pick a domain. Let fate choose.")
         ),
         h("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:24}},
-          CATS.map(c=>h("button",{key:c.id,onClick:()=>roll(c.id),style:{
+          CATS.map(c=>h("button",{key:c.id,onClick:()=>{roll(c.id);if(hasKey)getSmartNudge(c.id);},style:{
             display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"16px 6px",borderRadius:12,
             border:"1px solid "+(nCat===c.id?c.color:"rgba(255,255,255,0.05)"),
             background:nCat===c.id?c.color+"0d":"rgba(255,255,255,0.015)",
-            boxShadow:nCat===c.id?"0 0 20px "+c.color+"15, inset 0 0 20px "+c.color+"08":"none",
-            transition:"all 0.3s",
+            boxShadow:nCat===c.id?"0 0 20px "+c.color+"15, inset 0 0 20px "+c.color+"08":"none",transition:"all 0.3s",
           }},
             h("span",{style:{fontSize:18,fontWeight:800,color:nCat===c.id?c.color:"rgba(255,255,255,0.2)",transition:"all 0.3s"}},c.icon),
             h("span",{style:{fontSize:10,fontWeight:600,color:nCat===c.id?c.color:"rgba(255,255,255,0.25)",transition:"all 0.3s",letterSpacing:"0.5px"}},c.label)
           ))
         ),
-        nCat?h("div",{style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:16,padding:28,display:"flex",alignItems:"center",justifyContent:"center",minHeight:180}},
+        nCat?h("div",{style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:16,padding:28,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:180}},
           !nRev?h("div",{style:{padding:30}},
             h("div",{style:{width:24,height:24,border:"2px solid rgba(249,115,22,0.4)",borderTopColor:"#f97316",borderRadius:"50%",animation:"spin 0.6s linear infinite"}})
           ):h("div",{style:{animation:"cr 0.5s ease-out",width:"100%",textAlign:"center"}},
@@ -273,10 +352,19 @@ function App(){
               h("span",{style:{fontWeight:800,color:CATS.find(c=>c.id===nCat).color,fontSize:14}},CATS.find(c=>c.id===nCat).icon),
               h("span",{style:{fontWeight:600,color:CATS.find(c=>c.id===nCat).color,fontSize:12,letterSpacing:"0.5px"}},CATS.find(c=>c.id===nCat).label)
             ),
-            h("p",{style:{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:500,color:"#fafaf9",lineHeight:1.45,marginBottom:24,fontStyle:"italic"}},nTxt),
+            h("p",{style:{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:500,color:"#fafaf9",lineHeight:1.45,marginBottom:4,fontStyle:"italic"}},nTxt),
+            /* Smart nudge from AI */
+            hasKey&&h("div",{style:{marginTop:12,marginBottom:16}},
+              smartNudgeLoading?h("div",{style:{fontSize:11,color:"rgba(255,255,255,0.3)"}},h(Dots)):
+              smartNudge?h("div",null,
+                h("div",{style:{fontSize:9,fontWeight:700,color:"#f97316",letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:6}},"AI Suggestion"),
+                h("p",{style:{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:500,color:"#fafaf9",lineHeight:1.45,fontStyle:"italic"}},smartNudge)
+              ):null
+            ),
+            !hasKey&&h("div",{style:{height:16}}),
             h("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
-              h("button",{onClick:()=>roll(nCat),style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"9px 18px",fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.4)"}},"Reroll"),
-              h("button",{onClick:()=>{setFTxt(nTxt);setFCat(nCat);setFDif(2);setSel(todayK);setTab("cal");},style:{background:"#f97316",borderRadius:10,padding:"9px 20px",fontSize:12,fontWeight:700,color:"#fff",boxShadow:"0 4px 20px rgba(249,115,22,0.3)"}},"Accept challenge")
+              h("button",{onClick:()=>{roll(nCat);if(hasKey)getSmartNudge(nCat);},style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"9px 18px",fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.4)"}},"Reroll"),
+              h("button",{onClick:()=>{setFTxt(smartNudge||nTxt);setFCat(nCat);setFDif(2);setSel(todayK);setTab("cal");},style:{background:"#f97316",borderRadius:10,padding:"9px 20px",fontSize:12,fontWeight:700,color:"#fff",boxShadow:"0 4px 20px rgba(249,115,22,0.3)"}},"Accept")
             )
           )
         ):h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 0"}},
@@ -294,6 +382,18 @@ function App(){
           h("div",null,h(Ring,{progress:Math.min(keys.length/100,1),size:80,stroke:5,color:"#818cf8"},h("div",{style:{textAlign:"center"}},h("div",{style:{fontSize:18,fontWeight:800,color:"#fafaf9",fontFamily:"'Fraunces',serif"}},keys.length),h("div",{style:{fontSize:9,fontWeight:600,color:"rgba(255,255,255,0.2)",letterSpacing:"1px",textTransform:"uppercase"}},"total")))),
           h("div",null,h(Ring,{progress:keys.length?(keys.reduce((s,k)=>s+entries[k].d,0)/keys.length)/4:0,size:80,stroke:5,color:"#ef4444"},h("div",{style:{textAlign:"center"}},h("div",{style:{fontSize:18,fontWeight:800,color:"#fafaf9",fontFamily:"'Fraunces',serif"}},keys.length?(keys.reduce((s,k)=>s+entries[k].d,0)/keys.length).toFixed(1):"\u2014"),h("div",{style:{fontSize:9,fontWeight:600,color:"rgba(255,255,255,0.2)",letterSpacing:"1px",textTransform:"uppercase"}},"avg"))))
         ),
+
+        /* AI Insight card */
+        hasKey&&h("div",{style:{marginBottom:24}},
+          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+            h("h3",{style:{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.6)"}},"AI Insight"),
+            h("button",{onClick:getInsight,disabled:insightLoading,style:{background:"rgba(249,115,22,0.1)",border:"1px solid rgba(249,115,22,0.2)",borderRadius:8,padding:"5px 12px",fontSize:10,fontWeight:700,color:"#f97316",opacity:insightLoading?0.5:1}},insightLoading?"Thinking...":"Analyze")
+          ),
+          (insight||insightLoading)&&h("div",{style:{background:"rgba(249,115,22,0.04)",border:"1px solid rgba(249,115,22,0.1)",borderRadius:12,padding:"14px 16px"}},
+            insightLoading?h(Dots):h("p",{style:{fontSize:13,color:"rgba(255,255,255,0.7)",lineHeight:1.6,fontStyle:"italic",fontFamily:"'Fraunces',serif"}},insight)
+          )
+        ),
+
         h("div",{style:{marginBottom:24}},
           h("h3",{style:{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.6)",marginBottom:14}},"Domains"),
           CATS.map((c,i)=>{const ct=catCounts[c.id]||0,mx=Math.max(...Object.values(catCounts),1);return h("div",{key:c.id,style:{display:"flex",alignItems:"center",gap:8,marginBottom:10,animation:"fu 0.35s ease-out both",animationDelay:i*50+100+"ms"}},
@@ -325,6 +425,33 @@ function App(){
             );
           })
         )
+      ),
+
+      /* ─── SETTINGS ─── */
+      tab==="settings"&&h("div",{style:{animation:"fu 0.35s ease-out"}},
+        h("h2",{style:{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"#fafaf9",marginBottom:20}},"Settings"),
+        h("div",{style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:20,marginBottom:20}},
+          h("label",{style:{display:"block",fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.2)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}},"Claude API Key"),
+          h("p",{style:{fontSize:11,color:"rgba(255,255,255,0.3)",marginBottom:12,lineHeight:1.5}},"Stored locally on your device. Sent only to api.anthropic.com. Enables auto-tagging, smart nudges, and weekly insights."),
+          h("input",{type:"password",value:keyInput,onChange:e=>setKeyInput(e.target.value),placeholder:"sk-ant-...",style:{width:"100%",background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#e8e2dd",marginBottom:12}}),
+          h("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+            h("button",{onClick:saveKey,style:{background:"#f97316",borderRadius:10,padding:"9px 20px",fontSize:12,fontWeight:700,color:"#fff",boxShadow:"0 4px 20px rgba(249,115,22,0.25)"}},"Save"),
+            hasKey&&h("span",{style:{fontSize:11,color:"#6ee7a0",fontWeight:600}},"\u2713 Connected"),
+            apiKey&&!hasKey&&h("span",{style:{fontSize:11,color:"#ef4444",fontWeight:600}},"Invalid key format")
+          )
+        ),
+        h("div",{style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:14,padding:20}},
+          h("h3",{style:{fontFamily:"'Fraunces',serif",fontSize:14,fontWeight:600,color:"rgba(255,255,255,0.6)",marginBottom:12}},"AI Features"+(!hasKey?" (requires API key)":"")),
+          [{t:"Auto-tag",d:"Type your entry, Claude picks the category & difficulty for you"},{t:"Smart Nudges",d:"Personalized challenges based on your history & patterns"},{t:"Weekly Insight",d:"AI-powered pattern analysis on the Stats page"}].map((f,i)=>
+            h("div",{key:i,style:{display:"flex",gap:10,marginBottom:i<2?12:0,alignItems:"flex-start"}},
+              h("div",{style:{width:6,height:6,borderRadius:"50%",background:hasKey?"#6ee7a0":"rgba(255,255,255,0.1)",marginTop:5,flexShrink:0,boxShadow:hasKey?"0 0 4px rgba(110,231,160,0.3)":"none"}}),
+              h("div",null,
+                h("div",{style:{fontSize:12,fontWeight:600,color:hasKey?"rgba(255,255,255,0.7)":"rgba(255,255,255,0.25)"}},f.t),
+                h("div",{style:{fontSize:11,color:"rgba(255,255,255,0.2)",marginTop:2}},f.d)
+              )
+            )
+          )
+        )
       )
     ),
 
@@ -339,7 +466,16 @@ function App(){
           h("button",{onClick:()=>setSel(null),style:{fontSize:22,color:"rgba(255,255,255,0.2)",padding:"0 4px"}},"\u00D7")
         ),
         h("label",{style:{display:"block",fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.2)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}},"Act of discomfort"),
-        h("textarea",{value:fTxt,onChange:e=>setFTxt(e.target.value),placeholder:"What did you do?",rows:3,style:{width:"100%",background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:12,padding:"12px 14px",fontSize:13,color:"#e8e2dd",fontFamily:"'Sora',sans-serif",resize:"vertical",marginBottom:18,lineHeight:1.6}}),
+        h("textarea",{value:fTxt,onChange:e=>setFTxt(e.target.value),placeholder:"What did you do?",rows:3,style:{width:"100%",background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:12,padding:"12px 14px",fontSize:13,color:"#e8e2dd",fontFamily:"'Sora',sans-serif",resize:"vertical",marginBottom:hasKey?8:18,lineHeight:1.6}}),
+
+        /* Auto-tag button */
+        hasKey&&h("div",{style:{marginBottom:14}},
+          h("button",{onClick:autoTag,disabled:aiTagging||!fTxt.trim(),style:{background:"rgba(249,115,22,0.08)",border:"1px solid rgba(249,115,22,0.15)",borderRadius:8,padding:"6px 14px",fontSize:11,fontWeight:600,color:"#f97316",opacity:aiTagging||!fTxt.trim()?0.4:1,display:"flex",alignItems:"center",gap:6}},
+            aiTagging?h(Dots):null,
+            aiTagging?"Analyzing...":"\u2728 Auto-tag with AI"
+          )
+        ),
+
         h("label",{style:{display:"block",fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.2)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}},"Domain"),
         h("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginBottom:18}},
           CATS.map(c=>h("button",{key:c.id,onClick:()=>setFCat(c.id),style:{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"10px 4px",borderRadius:10,border:"1px solid "+(fCat===c.id?c.color:"rgba(255,255,255,0.05)"),background:fCat===c.id?c.color+"12":"transparent",transition:"all 0.2s"}},
