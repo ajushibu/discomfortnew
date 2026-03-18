@@ -198,6 +198,9 @@ function App(){
   }
 
   /* ── AI: Smart Nudge ── */
+  const ANGLES=["that involves a stranger","in a public place","that makes your voice shake","before 9am tomorrow","that you'd normally never do in a million years","involving eye contact","where you might get rejected","that your future self would thank you for","that feels physically awkward","with zero preparation time","where the outcome is uncertain","that requires vulnerability","in front of someone you respect","that breaks one of your personal rules","using only body language","that a monk would approve of","involving an uncomfortable conversation","where silence is part of it","that tests patience not courage","in an unfamiliar environment","that requires asking permission","where you deliberately slow down","involving cold or heat","that makes you look foolish","that a child would find easy but adults avoid"];
+  const CONTEXTS=["You are a provocative personal trainer who designs challenges that make people laugh nervously then actually do them.","You are a Zen master who believes discomfort is a doorway — your challenges are simple but psychologically precise.","You are an improv comedy coach — your challenges are playful but genuinely uncomfortable.","You are a special forces instructor designing mental toughness exercises for civilians.","You are a street philosopher who creates poetic everyday challenges.","You are a behavioural scientist designing micro-experiments in social courage.","You are a wilderness survival instructor adapting outdoor grit for urban life.","You are a theatre director who pushes actors past their comfort zone in daily life."];
+
   async function getSmartNudge(catId){
     if(!hasKey)return;
     setSmartNudgeLoading(true);setSmartNudge(null);setSmartNudgeDiff(null);setAiError(null);
@@ -205,19 +208,31 @@ function App(){
       const recent=[...keys].sort().reverse().slice(0,20);
       const avgD=recent.length?recent.reduce((s,k)=>s+entries[k].d,0)/recent.length:1;
       const catEntries=recent.filter(k=>entries[k].c===catId);
-      const pastChallenges=recent.map(k=>`- "${entries[k].t}" [${CATS.find(c=>c.id===entries[k].c)?.label}, ${DIFF[entries[k].d].label}]`).join("\n");
-      const catSpecific=catEntries.length?"\n\nPast entries in this SAME category:\n"+catEntries.map(k=>`- "${entries[k].t}" [${DIFF[entries[k].d].label}]`).join("\n"):"";
-      const resp=await callClaude(apiKey,
-        `You generate personalized discomfort challenges. Respond with ONLY a JSON object, no markdown, no backticks: {"challenge":"the challenge text","difficulty":0-4}
-difficulty scale: 0=mild,1=moderate,2=hard,3=intense,4=extreme.
+      const pastChallenges=recent.map(k=>`- "${entries[k].t}"`).join("\n");
+      const catSpecific=catEntries.length?"\nAlready done in "+catId+":\n"+catEntries.map(k=>`- "${entries[k].t}"`).join("\n"):"";
 
-Rules:
-- Category requested: "${catId}"
-- User's average difficulty recently: ${avgD.toFixed(1)}/4 — push them ABOVE this, suggest something at least 1 level harder
-- NEVER repeat or closely resemble any challenge from their history
-- Be specific and actionable, not vague. 1-2 sentences max
-- Be creative — surprise them with something they wouldn't think of themselves`,
-        "FULL HISTORY (do NOT repeat any of these):\n"+pastChallenges+catSpecific+"\n\nGenerate a fresh, harder "+catId+" challenge."
+      /* Random angle + context for variety */
+      const angle=ANGLES[Math.floor(Math.random()*ANGLES.length)];
+      const context=CONTEXTS[Math.floor(Math.random()*CONTEXTS.length)];
+      const rndSeed=Math.random().toString(36).slice(2,8);
+
+      const resp=await callClaude(apiKey,
+        `${context}
+
+Generate ONE discomfort challenge. Respond with ONLY a JSON object, no markdown, no backticks:
+{"challenge":"the challenge text","difficulty":0-4}
+
+Difficulty: 0=mild,1=moderate,2=hard,3=intense,4=extreme
+
+Constraints:
+- Category: "${catId}"
+- Creative angle for THIS specific challenge: "${angle}"
+- User's avg difficulty: ${avgD.toFixed(1)}/4 — aim at least 1 level above this
+- Must be SPECIFIC and ACTIONABLE — not generic advice. Describe exactly what to do
+- 1-2 sentences max, punchy, no fluff
+- Must feel fresh and surprising — avoid clichés like "cold shower" or "talk to a stranger" unless the angle makes it genuinely novel
+- Seed: ${rndSeed}`,
+        "BANNED (already done, do NOT repeat or resemble):\n"+(pastChallenges||"None yet")+catSpecific+"\n\nGenerate something they've never considered."
       );
       const clean=resp.replace(/```json|```/g,"").trim();
       const parsed=JSON.parse(clean);
