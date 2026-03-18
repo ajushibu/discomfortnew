@@ -137,6 +137,7 @@ function App(){
   const[insight,setInsight]=useState(null);
   const[insightLoading,setInsightLoading]=useState(false);
   const[smartNudge,setSmartNudge]=useState(null);
+  const[smartNudgeDiff,setSmartNudgeDiff]=useState(null);
   const[smartNudgeLoading,setSmartNudgeLoading]=useState(false);
   const[aiError,setAiError]=useState(null);
 
@@ -157,7 +158,7 @@ function App(){
   function save(){if(!fTxt.trim())return;const isNew=!entries[sel];setEntries(p=>({...p,[sel]:{t:fTxt.trim(),d:fDif,c:fCat}}));if(isNew){setXpPop(DIFF[fDif].xp);setTimeout(()=>setXpPop(null),1600);}setSel(null);}
   function del(){setEntries(p=>{const n={...p};delete n[sel];return n;});setSel(null);}
   function chMo(dir){let m=vM+dir,y=vY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}setVM(m);setVY(y);}
-  function roll(cid){setNCat(cid);setNRev(false);setSmartNudge(null);const rng=sRng(todayK+cid+Date.now());const p=NUDGES[cid];setNTxt(p[Math.floor(rng()*p.length)]);setTimeout(()=>setNRev(true),500);}
+  function roll(cid){setNCat(cid);setNRev(false);setSmartNudge(null);setSmartNudgeDiff(null);const rng=sRng(todayK+cid+Date.now());const p=NUDGES[cid];setNTxt(p[Math.floor(rng()*p.length)]);setTimeout(()=>setNRev(true),500);}
 
   /* ── AI: Auto-tag ── */
   async function autoTag(){
@@ -199,17 +200,29 @@ function App(){
   /* ── AI: Smart Nudge ── */
   async function getSmartNudge(catId){
     if(!hasKey)return;
-    setSmartNudgeLoading(true);setSmartNudge(null);setAiError(null);
+    setSmartNudgeLoading(true);setSmartNudge(null);setSmartNudgeDiff(null);setAiError(null);
     try{
-      const recent=[...keys].sort().reverse().slice(0,10);
-      const summary=recent.length?recent.map(k=>{
-        const e=entries[k];return `"${e.t}" [${CATS.find(c=>c.id===e.c)?.label}, ${DIFF[e.d].label}]`;
-      }).join("; "):"No entries yet.";
+      const recent=[...keys].sort().reverse().slice(0,20);
+      const avgD=recent.length?recent.reduce((s,k)=>s+entries[k].d,0)/recent.length:1;
+      const catEntries=recent.filter(k=>entries[k].c===catId);
+      const pastChallenges=recent.map(k=>`- "${entries[k].t}" [${CATS.find(c=>c.id===entries[k].c)?.label}, ${DIFF[entries[k].d].label}]`).join("\n");
+      const catSpecific=catEntries.length?"\n\nPast entries in this SAME category:\n"+catEntries.map(k=>`- "${entries[k].t}" [${DIFF[entries[k].d].label}]`).join("\n"):"";
       const resp=await callClaude(apiKey,
-        `You generate personalized discomfort challenges. The user wants a "${catId}" category challenge. Based on their history, suggest ONE specific, actionable challenge they haven't done before. Make it creative and calibrated slightly above their recent difficulty. Reply with ONLY the challenge text, no quotes, no preamble, 1-2 sentences max.`,
-        "My recent entries: "+summary
+        `You generate personalized discomfort challenges. Respond with ONLY a JSON object, no markdown, no backticks: {"challenge":"the challenge text","difficulty":0-4}
+difficulty scale: 0=mild,1=moderate,2=hard,3=intense,4=extreme.
+
+Rules:
+- Category requested: "${catId}"
+- User's average difficulty recently: ${avgD.toFixed(1)}/4 — push them ABOVE this, suggest something at least 1 level harder
+- NEVER repeat or closely resemble any challenge from their history
+- Be specific and actionable, not vague. 1-2 sentences max
+- Be creative — surprise them with something they wouldn't think of themselves`,
+        "FULL HISTORY (do NOT repeat any of these):\n"+pastChallenges+catSpecific+"\n\nGenerate a fresh, harder "+catId+" challenge."
       );
-      setSmartNudge(resp.trim());
+      const clean=resp.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean);
+      if(parsed.challenge)setSmartNudge(parsed.challenge);
+      if(typeof parsed.difficulty==="number"&&parsed.difficulty>=0&&parsed.difficulty<=4)setSmartNudgeDiff(parsed.difficulty);
     }catch(e){setAiError("Smart nudge failed");}
     setSmartNudgeLoading(false);
   }
@@ -345,26 +358,46 @@ function App(){
           ))
         ),
         nCat?h("div",{style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:16,padding:28,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:180}},
-          !nRev?h("div",{style:{padding:30}},
-            h("div",{style:{width:24,height:24,border:"2px solid rgba(249,115,22,0.4)",borderTopColor:"#f97316",borderRadius:"50%",animation:"spin 0.6s linear infinite"}})
-          ):h("div",{style:{animation:"cr 0.5s ease-out",width:"100%",textAlign:"center"}},
-            h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:16}},
-              h("span",{style:{fontWeight:800,color:CATS.find(c=>c.id===nCat).color,fontSize:14}},CATS.find(c=>c.id===nCat).icon),
-              h("span",{style:{fontWeight:600,color:CATS.find(c=>c.id===nCat).color,fontSize:12,letterSpacing:"0.5px"}},CATS.find(c=>c.id===nCat).label)
-            ),
-            h("p",{style:{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:500,color:"#fafaf9",lineHeight:1.45,marginBottom:4,fontStyle:"italic"}},nTxt),
-            /* Smart nudge from AI */
-            hasKey&&h("div",{style:{marginTop:12,marginBottom:16}},
-              smartNudgeLoading?h("div",{style:{fontSize:11,color:"rgba(255,255,255,0.3)"}},h(Dots)):
-              smartNudge?h("div",null,
-                h("div",{style:{fontSize:9,fontWeight:700,color:"#f97316",letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:6}},"AI Suggestion"),
-                h("p",{style:{fontFamily:"'Fraunces',serif",fontSize:17,fontWeight:500,color:"#fafaf9",lineHeight:1.45,fontStyle:"italic"}},smartNudge)
-              ):null
-            ),
-            !hasKey&&h("div",{style:{height:16}}),
-            h("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
-              h("button",{onClick:()=>{roll(nCat);if(hasKey)getSmartNudge(nCat);},style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"9px 18px",fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.4)"}},"Reroll"),
-              h("button",{onClick:()=>{setFTxt(smartNudge||nTxt);setFCat(nCat);setFDif(2);setSel(todayK);setTab("cal");},style:{background:"#f97316",borderRadius:10,padding:"9px 20px",fontSize:12,fontWeight:700,color:"#fff",boxShadow:"0 4px 20px rgba(249,115,22,0.3)"}},"Accept")
+          /* If has API key: show ONLY AI result */
+          hasKey?(
+            smartNudgeLoading?h("div",{style:{padding:30,display:"flex",flexDirection:"column",alignItems:"center",gap:10}},
+              h("div",{style:{width:24,height:24,border:"2px solid rgba(249,115,22,0.4)",borderTopColor:"#f97316",borderRadius:"50%",animation:"spin 0.6s linear infinite"}}),
+              h("span",{style:{fontSize:11,color:"rgba(255,255,255,0.25)"}},"Crafting your challenge...")
+            ):smartNudge?h("div",{style:{animation:"cr 0.5s ease-out",width:"100%",textAlign:"center"}},
+              h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:16}},
+                h("span",{style:{fontWeight:800,color:CATS.find(c=>c.id===nCat).color,fontSize:14}},CATS.find(c=>c.id===nCat).icon),
+                h("span",{style:{fontWeight:600,color:CATS.find(c=>c.id===nCat).color,fontSize:12,letterSpacing:"0.5px"}},CATS.find(c=>c.id===nCat).label)
+              ),
+              h("p",{style:{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:500,color:"#fafaf9",lineHeight:1.45,marginBottom:16,fontStyle:"italic"}},smartNudge),
+              /* XP preview */
+              smartNudgeDiff!==null&&h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:20}},
+                h("div",{style:{display:"flex",alignItems:"center",gap:4}},
+                  h("div",{style:{width:6,height:6,borderRadius:"50%",background:DIFF[smartNudgeDiff].color,boxShadow:"0 0 6px "+DIFF[smartNudgeDiff].glow}}),
+                  h("span",{style:{fontSize:11,fontWeight:600,color:DIFF[smartNudgeDiff].color}},DIFF[smartNudgeDiff].label)
+                ),
+                h("span",{style:{fontSize:12,fontWeight:800,color:"#f97316",fontFamily:"'Fraunces',serif"}},"+"+DIFF[smartNudgeDiff].xp+" XP")
+              ),
+              h("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
+                h("button",{onClick:()=>{setSmartNudge(null);setSmartNudgeDiff(null);getSmartNudge(nCat);},style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"9px 18px",fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.4)"}},"Reroll"),
+                h("button",{onClick:()=>{setFTxt(smartNudge);setFCat(nCat);setFDif(smartNudgeDiff!==null?smartNudgeDiff:2);setSel(todayK);setTab("cal");},style:{background:"#f97316",borderRadius:10,padding:"9px 20px",fontSize:12,fontWeight:700,color:"#fff",boxShadow:"0 4px 20px rgba(249,115,22,0.3)"}},"Accept")
+              )
+            ):h("div",{style:{padding:30}},
+              h("div",{style:{width:24,height:24,border:"2px solid rgba(249,115,22,0.4)",borderTopColor:"#f97316",borderRadius:"50%",animation:"spin 0.6s linear infinite"}})
+            )
+          ):(
+            /* No API key: static nudge */
+            !nRev?h("div",{style:{padding:30}},
+              h("div",{style:{width:24,height:24,border:"2px solid rgba(249,115,22,0.4)",borderTopColor:"#f97316",borderRadius:"50%",animation:"spin 0.6s linear infinite"}})
+            ):h("div",{style:{animation:"cr 0.5s ease-out",width:"100%",textAlign:"center"}},
+              h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:16}},
+                h("span",{style:{fontWeight:800,color:CATS.find(c=>c.id===nCat).color,fontSize:14}},CATS.find(c=>c.id===nCat).icon),
+                h("span",{style:{fontWeight:600,color:CATS.find(c=>c.id===nCat).color,fontSize:12,letterSpacing:"0.5px"}},CATS.find(c=>c.id===nCat).label)
+              ),
+              h("p",{style:{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:500,color:"#fafaf9",lineHeight:1.45,marginBottom:20,fontStyle:"italic"}},nTxt),
+              h("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
+                h("button",{onClick:()=>{roll(nCat);},style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"9px 18px",fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.4)"}},"Reroll"),
+                h("button",{onClick:()=>{setFTxt(nTxt);setFCat(nCat);setFDif(2);setSel(todayK);setTab("cal");},style:{background:"#f97316",borderRadius:10,padding:"9px 20px",fontSize:12,fontWeight:700,color:"#fff",boxShadow:"0 4px 20px rgba(249,115,22,0.3)"}},"Accept")
+              )
             )
           )
         ):h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 0"}},
